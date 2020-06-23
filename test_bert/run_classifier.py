@@ -435,17 +435,27 @@ class twitterProcessor(DataProcessor):
         return examples
 
     def get_test_examples(self, data_dir):
-        filename=os.path.join(data_dir, "get_test.csv")
-        examples=[]
-        with open(filename,'r',encoding='utf-8') as f:
-            lines=f.readlines()
-            for index,line in enumerate(lines):
-                guid = "%s-%s" % ('test', index)
-                text_a = tokenization.convert_to_unicode(line.strip())
-                text_b=None
-                label='0'
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-        return examples
+#         filename=os.path.join(data_dir, "get_test.csv")
+#         examples=[]
+#         with open(filename,'r',encoding='utf-8') as f:
+#             lines=f.readlines()
+#             for index,line in enumerate(lines):
+#                 guid = "%s-%s" % ('test', index)
+#                 text_a = tokenization.convert_to_unicode(line.strip())
+#                 text_b=None
+#                 label='0'
+#                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+#         return examples
+          examples = []
+
+          data = pd.read_csv(data_dir, header=None,  index_col=0)
+          data.columns=["Sentence"]
+          data = data.dropna()
+
+          for _, row in data.iterrows():
+            examples.append(InputExample(guid="unused_id", text_a=row['Sentence'], text_b=None, label=0))
+          return examples
+    
     def get_labels(self):
         return[0,1]
 
