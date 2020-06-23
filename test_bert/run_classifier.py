@@ -455,7 +455,7 @@ class twitterProcessor(DataProcessor):
           for _, row in data.iterrows():
             examples.append(InputExample(guid="unused_id", text_a=row['Sentence'], text_b=None, label=0))
           return examples
-    
+
     def get_labels(self):
         return[0,1]
 
@@ -867,6 +867,21 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
   return features
 
 
+def serving_input_fn():
+    label_ids   = tf.placeholder(tf.int32, [None], name='label_ids')
+    input_ids   = tf.placeholder(tf.int32, [None, FLAGS.max_seq_length], name='input_ids')
+    input_mask  = tf.placeholder(tf.int32, [None, FLAGS.max_seq_length], name='input_mask')
+    segment_ids = tf.placeholder(tf.int32, [None, FLAGS.max_seq_length], name='segment_ids')
+    is_real_example = tf.placeholder(tf.int32, [None], name='is_real_example')
+    input_fn = tf.estimator.export.build_raw_serving_input_receiver_fn({
+        'label_ids': label_ids,
+        'input_ids': input_ids,
+        'input_mask': input_mask,
+        'segment_ids': segment_ids,
+        'is_real_example': is_real_example
+    })()
+    return input_fn
+
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -956,16 +971,45 @@ def main(_):
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
     file_based_convert_examples_to_features(
         train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+
+    eval_examples = processor.get_dev_examples(FLAGS.data_dir)
+    num_actual_eval_examples = len(eval_examples)
+
+    eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+    file_based_convert_examples_to_features(
+        eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
+
     tf.logging.info("***** Running training *****")
     tf.logging.info("  Num examples = %d", len(train_examples))
     tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
     tf.logging.info("  Num steps = %d", num_train_steps)
+
+    tf.logging.info("***** Running evaluation *****")
+    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
+                    len(eval_examples), num_actual_eval_examples,
+                    len(eval_examples) - num_actual_eval_examples)
+    tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
+
     train_input_fn = file_based_input_fn_builder(
         input_file=train_file,
         seq_length=FLAGS.max_seq_length,
         is_training=True,
         drop_remainder=True)
-    estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+
+    eval_drop_remainder = True if FLAGS.use_tpu else False
+    eval_input_fn = file_based_input_fn_builder(
+        input_file=eval_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=False,
+        drop_remainder=eval_drop_remainder)
+
+    exporter = tf.estimator.BestExporter(exports_to_keep=1, serving_input_receiver_fn=serving_input_fn)
+
+    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=FLAGS.train_steps, exporters=exporter, start_delay_secs=0,  throttle_secs=5)
+    #estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
+
+    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
   if FLAGS.do_eval:
     eval_examples = processor.get_dev_examples(FLAGS.data_dir)
