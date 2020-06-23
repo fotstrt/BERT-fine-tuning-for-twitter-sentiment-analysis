@@ -398,7 +398,7 @@ class twitterProcessor(DataProcessor):
         return self._test_create_examples(data_dir)
 
 
-    def create_examples(self,lines,set_type):
+    def create_examples(self, data_dir):
         # examples=[]
         # for index,line in enumerate(lines):
         #     guid = "%s-%s" % (set_type, index)
