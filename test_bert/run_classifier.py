@@ -1005,8 +1005,8 @@ def main(_):
 
     exporter = tf.estimator.BestExporter(exports_to_keep=1, serving_input_receiver_fn=serving_input_fn)
 
-    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
-    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=FLAGS.train_steps, exporters=exporter, start_delay_secs=0,  throttle_secs=5)
+    train_spec = tf.estimator.TrainSpec(input_fn=train_input_fn, max_steps=num_train_steps)
+    eval_spec = tf.estimator.EvalSpec(input_fn=eval_input_fn, steps=num_train_steps, exporters=exporter, start_delay_secs=0,  throttle_secs=5)
     #estimator.train(input_fn=train_input_fn, max_steps=FLAGS.train_steps)
 
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
