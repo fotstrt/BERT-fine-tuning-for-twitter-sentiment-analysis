@@ -383,7 +383,7 @@ class twitterProcessor(DataProcessor):
 #         with open(file_path,'r',encoding='utf-8') as f:
 #                 reader=f.readlines()
 #                 return self.create_examples(reader,"train")
-        return self._create_examples(data_dir)
+        return self.create_examples(data_dir)
 
     def get_dev_examples(self, data_dir):
 
@@ -391,7 +391,7 @@ class twitterProcessor(DataProcessor):
 #         with open(file_path,'r',encoding='utf-8') as f:
 #             reader=f.readlines()
 #             return self.create_examples(reader,"dev")
-        return self._create_eval_examples(data_dir)
+        return self.create_eval_examples(data_dir)
 
     def get_test_examples(self, data_dir):
     # return self._create_examples(os.path.join(data_dir, "test.csv"))
@@ -421,7 +421,7 @@ class twitterProcessor(DataProcessor):
             examples.append(InputExample(guid="unused_id", text_a=row['Sentence'], text_b=None, label=row['Label']))
         return examples
 
-    def _create_eval_examples(self, data_dir):
+    def create_eval_examples(self, data_dir):
         examples = []
 
         data = pd.read_csv(data_dir, header=None,  index_col=0)
