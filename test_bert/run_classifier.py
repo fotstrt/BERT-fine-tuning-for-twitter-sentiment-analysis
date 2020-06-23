@@ -26,6 +26,9 @@ import optimization
 import tokenization
 import tensorflow as tf
 
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
 flags = tf.flags
 
 FLAGS = flags.FLAGS
@@ -374,30 +377,63 @@ class ColaProcessor(DataProcessor):
     return examples
 
 class twitterProcessor(DataProcessor):
-    
+
     def get_train_examples(self, data_dir):
-        file_path=os.path.join(data_dir,"train.csv")
-        with open(file_path,'r',encoding='utf-8') as f:
-                reader=f.readlines()
-                return self.create_examples(reader,"train")
+#         file_path=os.path.join(data_dir,"train.csv")
+#         with open(file_path,'r',encoding='utf-8') as f:
+#                 reader=f.readlines()
+#                 return self.create_examples(reader,"train")
+        return self._create_examples(data_dir)
 
     def get_dev_examples(self, data_dir):
-    
-        file_path=os.path.join(data_dir,"dev.csv")
-        with open(file_path,'r',encoding='utf-8') as f:
-            reader=f.readlines()
-            return self.create_examples(reader,"dev")
-    
+
+#         file_path=os.path.join(data_dir,"dev.csv")
+#         with open(file_path,'r',encoding='utf-8') as f:
+#             reader=f.readlines()
+#             return self.create_examples(reader,"dev")
+        return self._create_eval_examples(data_dir)
+
+    def get_test_examples(self, data_dir):
+    # return self._create_examples(os.path.join(data_dir, "test.csv"))
+        return self._test_create_examples(data_dir)
+
+
     def create_examples(self,lines,set_type):
-        examples=[]
-        for index,line in enumerate(lines):
-            guid = "%s-%s" % (set_type, index)
-            split_line=line.strip().split('+++$+++')
-            text_a = tokenization.convert_to_unicode(split_line[1])
-            text_b=None
-            label=split_line[0]
-            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        # examples=[]
+        # for index,line in enumerate(lines):
+        #     guid = "%s-%s" % (set_type, index)
+        #     split_line=line.strip().split('+++$+++')
+        #     text_a = tokenization.convert_to_unicode(split_line[1])
+        #     text_b=None
+        #     label=split_line[0]
+        #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        # return examples
+        examples = []
+
+        data = pd.read_csv(data_dir, header=None,  index_col=0)
+        data.columns=["Label", "Sentence"]
+        data = data.dropna()
+        data.drop_duplicates(subset ="Sentence", inplace = True)
+        data, _ = train_test_split(data, test_size=0.1, random_state=7)
+
+
+        for _, row in data.iterrows():
+            examples.append(InputExample(guid="unused_id", text_a=row['Sentence'], text_b=None, label=row['Label']))
         return examples
+
+    def _create_eval_examples(self, data_dir):
+        examples = []
+
+        data = pd.read_csv(data_dir, header=None,  index_col=0)
+        data.columns=["Label", "Sentence"]
+        data = data.dropna()
+        data.drop_duplicates(subset ="Sentence", inplace = True)
+        _, data = train_test_split(data, test_size=0.1, random_state=7)
+
+        for _, row in data.iterrows():
+            examples.append(InputExample(guid="unused_id", text_a=row['Sentence'], text_b=None, label=row['Label']))
+        return examples
+
     def get_test_examples(self, data_dir):
         filename=os.path.join(data_dir, "get_test.csv")
         examples=[]
@@ -412,9 +448,9 @@ class twitterProcessor(DataProcessor):
         return examples
     def get_labels(self):
         return['0','1']
-    
-    
-    
+
+
+
 def convert_single_example(ex_index, example, label_list, max_seq_length,
                            tokenizer):
   """Converts a single `InputExample` into a single `InputFeatures`."""
