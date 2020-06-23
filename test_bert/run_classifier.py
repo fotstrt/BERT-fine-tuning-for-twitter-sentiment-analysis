@@ -447,7 +447,7 @@ class twitterProcessor(DataProcessor):
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
         return examples
     def get_labels(self):
-        return['0','1']
+        return[0,1]
 
 
 
